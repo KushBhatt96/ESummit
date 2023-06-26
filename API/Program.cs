@@ -1,4 +1,5 @@
 using API.Data;
+using API.Middleware;
 using Microsoft.EntityFrameworkCore;
 
 namespace API
@@ -9,7 +10,7 @@ namespace API
         {
             var builder = WebApplication.CreateBuilder(args);
 
-            // Add services to the container.
+            // Add services to the container. ORDER *NOT* IMPORTANT HERE.
 
             builder.Services.AddControllers();
             // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
@@ -19,10 +20,13 @@ namespace API
             {
                 opt.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection"));
             });
+            builder.Services.AddCors();
 
             var app = builder.Build();
 
-            // Configure the HTTP request pipeline.
+            // Configure the HTTP request pipeline. AKA middleware pipeline. ORDER *IS* IMPORTANT HERE.
+            app.UseMiddleware<ExceptionMiddleware>();
+
             if (app.Environment.IsDevelopment())
             {
                 app.UseSwagger();
@@ -31,8 +35,16 @@ namespace API
 
             // app.UseHttpsRedirection();
 
+            // Server must respond with CORS header indicating that the specified client url is allowed to display the returned data
+            app.UseCors(opt =>
+            {
+                opt.AllowAnyHeader().AllowAnyMethod().WithOrigins("http://127.0.0.1:5173", "http://localhost:5173");
+            });
+
+            //TODO: need to understand this middleware a bit better
             app.UseAuthorization();
 
+            // Without this built-in MapControllers middleware, we won't be able to hit our API endpoints
             app.MapControllers();
 
             var scope = app.Services.CreateScope();
