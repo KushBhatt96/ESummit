@@ -1,6 +1,6 @@
-using API.Entities;
+using Domain;
 
-namespace API.Data
+namespace Persistence
 {
     public static class DbInitializer
     {
@@ -10,7 +10,7 @@ namespace API.Data
 
             var products = new List<Product>
             {
-                        new Product
+                new Product
                 {
                     Name = "Angular Speedster Board 2000",
                     Description =
@@ -18,7 +18,7 @@ namespace API.Data
                     Price = 20000,
                     PictureUrl = "/images/products/sb-ang1.png",
                     Brand = "Angular",
-                    Type = "Boards",
+                    Type = ProductType.Accessories,
                     QuantityInStock = 100
                 },
                 new Product
@@ -28,7 +28,7 @@ namespace API.Data
                     Price = 15000,
                     PictureUrl = "/images/products/sb-ang2.png",
                     Brand = "Angular",
-                    Type = "Boards",
+                    Type = ProductType.Accessories,
                     QuantityInStock = 100
                 },
                 new Product
@@ -39,7 +39,7 @@ namespace API.Data
                     Price = 18000,
                     PictureUrl = "/images/products/sb-core1.png",
                     Brand = "NetCore",
-                    Type = "Boards",
+                    Type = ProductType.Accessories,
                     QuantityInStock = 100
                 },
                 new Product
@@ -50,7 +50,7 @@ namespace API.Data
                     Price = 30000,
                     PictureUrl = "/images/products/sb-core2.png",
                     Brand = "NetCore",
-                    Type = "Boards",
+                    Type = ProductType.Accessories,
                     QuantityInStock = 100
                 },
                 new Product
@@ -61,7 +61,7 @@ namespace API.Data
                     Price = 25000,
                     PictureUrl = "/images/products/sb-react1.png",
                     Brand = "React",
-                    Type = "Boards",
+                    Type = ProductType.Accessories,
                     QuantityInStock = 100
                 },
                 new Product
@@ -72,7 +72,7 @@ namespace API.Data
                     Price = 12000,
                     PictureUrl = "/images/products/sb-ts1.png",
                     Brand = "TypeScript",
-                    Type = "Boards",
+                    Type = ProductType.Accessories,
                     QuantityInStock = 100
                 },
                 new Product
@@ -83,7 +83,7 @@ namespace API.Data
                     Price = 1000,
                     PictureUrl = "/images/products/hat-core1.png",
                     Brand = "NetCore",
-                    Type = "Hats",
+                    Type = ProductType.Accessories,
                     QuantityInStock = 100
                 },
                 new Product
@@ -94,7 +94,7 @@ namespace API.Data
                     Price = 8000,
                     PictureUrl = "/images/products/hat-react1.png",
                     Brand = "React",
-                    Type = "Hats",
+                    Type = ProductType.Accessories,
                     QuantityInStock = 100
                 },
                 new Product
@@ -105,7 +105,7 @@ namespace API.Data
                     Price = 1500,
                     PictureUrl = "/images/products/hat-react2.png",
                     Brand = "React",
-                    Type = "Hats",
+                    Type = ProductType.Accessories,
                     QuantityInStock = 100
                 },
                 new Product
@@ -116,7 +116,7 @@ namespace API.Data
                     Price = 1800,
                     PictureUrl = "/images/products/glove-code1.png",
                     Brand = "VS Code",
-                    Type = "Gloves",
+                    Type = ProductType.Accessories,
                     QuantityInStock = 100
                 },
                 new Product
@@ -127,7 +127,7 @@ namespace API.Data
                     Price = 1500,
                     PictureUrl = "/images/products/glove-code2.png",
                     Brand = "VS Code",
-                    Type = "Gloves",
+                    Type = ProductType.Accessories,
                     QuantityInStock = 100
                 },
                 new Product
@@ -138,7 +138,7 @@ namespace API.Data
                     Price = 1600,
                     PictureUrl = "/images/products/glove-react1.png",
                     Brand = "React",
-                    Type = "Gloves",
+                    Type = ProductType.Accessories,
                     QuantityInStock = 100
                 },
                 new Product
@@ -149,7 +149,7 @@ namespace API.Data
                     Price = 1400,
                     PictureUrl = "/images/products/glove-react2.png",
                     Brand = "React",
-                    Type = "Gloves",
+                    Type = ProductType.Accessories,
                     QuantityInStock = 100
                 },
                 new Product
@@ -160,7 +160,7 @@ namespace API.Data
                     Price = 25000,
                     PictureUrl = "/images/products/boot-redis1.png",
                     Brand = "Redis",
-                    Type = "Boots",
+                    Type = ProductType.Footwear,
                     QuantityInStock = 100
                 },
                 new Product
@@ -171,7 +171,7 @@ namespace API.Data
                     Price = 18999,
                     PictureUrl = "/images/products/boot-core2.png",
                     Brand = "NetCore",
-                    Type = "Boots",
+                    Type = ProductType.Footwear,
                     QuantityInStock = 100
                 },
                 new Product
@@ -182,7 +182,7 @@ namespace API.Data
                     Price = 19999,
                     PictureUrl = "/images/products/boot-core1.png",
                     Brand = "NetCore",
-                    Type = "Boots",
+                    Type = ProductType.Footwear,
                     QuantityInStock = 100
                 },
                 new Product
@@ -192,7 +192,7 @@ namespace API.Data
                     Price = 15000,
                     PictureUrl = "/images/products/boot-ang2.png",
                     Brand = "Angular",
-                    Type = "Boots",
+                    Type = ProductType.Footwear,
                     QuantityInStock = 100
                 },
                 new Product
@@ -203,7 +203,7 @@ namespace API.Data
                     Price = 18000,
                     PictureUrl = "/images/products/boot-ang1.png",
                     Brand = "Angular",
-                    Type = "Boots",
+                    Type = ProductType.Footwear,
                     QuantityInStock = 100
                 },
             };
@@ -212,6 +212,16 @@ namespace API.Data
             {
                 await context.AddAsync(product);
             }
+
+            var cart = new Cart
+            {
+                CreatedAt = DateTime.UtcNow,
+                LastUpdated = DateTime.UtcNow,
+                CartTotal = 0,
+                CustomerId = 1,
+            };
+
+            await context.Carts.AddAsync(cart);
 
             await context.SaveChangesAsync();
         }

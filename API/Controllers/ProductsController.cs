@@ -1,31 +1,30 @@
-using API.Data;
-using API.Entities;
+using Application.Products.Queries.GetProductDetail;
+using Application.Products.Queries.GetProducts;
+using Domain;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 namespace API.Controllers
 {
     public class ProductsController : BaseApiController
     {
-        private readonly StoreContext _context;
-        public ProductsController(StoreContext context) : base()
+        private readonly IGetProductsQuery _getProductsQuery;
+        private readonly IGetProductDetailQuery _getProductDetailQuery;
+        public ProductsController(IGetProductsQuery getProductsQuery, IGetProductDetailQuery getProductDetailQuery)
         {
-            _context = context;
+            _getProductsQuery = getProductsQuery;
+            _getProductDetailQuery = getProductDetailQuery;
         }
 
         [HttpGet] // api/products
         public async Task<ActionResult<List<Product>>> GetProducts()
         {
-            var products = await _context.Products.ToListAsync();
-            return products;
+            return await _getProductsQuery.ExecuteAsync();
         }
 
         [HttpGet("{id}")] // api/products/3
-        public async Task<ActionResult<Product>> GetProduct(int id)
+        public async Task<ActionResult<Product>> GetProductDetail(int id)
         {
-            var product = await _context.Products.FindAsync(id);
-            if (product == null) return NotFound();
-            return product;
+            return await _getProductDetailQuery.ExecuteAsync(id);
         }
     }
 }

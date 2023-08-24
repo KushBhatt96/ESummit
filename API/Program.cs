@@ -1,6 +1,13 @@
-using API.Data;
 using API.Middleware;
 using Microsoft.EntityFrameworkCore;
+using Persistence;
+using Application.CartItems.Commands.AddCartItem;
+using System.Text.Json.Serialization;
+using Application.CartItems.Commands.RemoveCartItem;
+using Application.CartItems.Commands.UpdateCartItemQuantity;
+using Application.Carts.Queries.GetCart;
+using Application.Products.Queries.GetProducts;
+using Application.Products.Queries.GetProductDetail;
 
 namespace API
 {
@@ -12,15 +19,31 @@ namespace API
 
             // Add services to the container. ORDER *NOT* IMPORTANT HERE.
 
-            builder.Services.AddControllers();
+            builder.Services.AddControllers()
+                            .AddJsonOptions(opt =>
+                            {
+                                opt.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+
+                                // This configuration is required for System.Text.Json to prevent object cycle errors during json serialization
+                                opt.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
+                            });
             // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();
             builder.Services.AddDbContext<StoreContext>(opt =>
             {
+                // Here we are providing EF Core with the DB connection string which is in our appsettings.Development.json file.
+                // The reason we have access to the .UseSqlite extension method is bc we installed the EFCore Sqlite provider
+                // package. If we had installed some other provider, say EFCore SqlServer, we'd see that extension method instead.
                 opt.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection"));
             });
             builder.Services.AddCors();
+            builder.Services.AddScoped<IAddCartItemCommand, AddCartItemCommand>();
+            builder.Services.AddScoped<IRemoveCartItemCommand, RemoveCartItemCommand>();
+            builder.Services.AddScoped<IUpdateCartItemQuantityCommand, UpdateCartItemQuantityCommand>();
+            builder.Services.AddScoped<IGetCartQuery, GetCartQuery>();
+            builder.Services.AddScoped<IGetProductsQuery, GetProductsQuery>();
+            builder.Services.AddScoped<IGetProductDetailQuery, GetProductDetailQuery>();
 
             var app = builder.Build();
 
