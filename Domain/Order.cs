@@ -1,4 +1,6 @@
-﻿namespace Domain
+﻿using Domain.ExplicitJoinEntities;
+
+namespace Domain
 {
     public class Order
     {
@@ -10,14 +12,19 @@
         public double Total { get; set; }
         public DateTime ExpectedDeliveryDate { get; set; }
         public ShippingStatus Status { get; set; }
-        public Address ShippingAddress { get; set; }
-        public int CustomerId { get; set; }
-        //public List<Product> Products { get; set; }
 
-        //public Order()
-        //{
-        //    Products = new List<Product>();
-        //}
+        // For the order entity class, we are choosing to include an Address navigation property
+        // rather than AddressId foreign key. The foreign key will implicitly be created in the database anyway.
+        // We are excluding the foreign key in this entity class, since there won't be much use for it.
+        public Address Address { get; set; }
+        public string AppUserId { get; set; }
+
+        public List<OrderItem> OrderItems { get; set; }
+
+        public Order()
+        {
+            OrderItems = new List<OrderItem>();
+        }
     }
 
     public enum ShippingStatus

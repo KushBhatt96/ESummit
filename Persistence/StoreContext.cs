@@ -1,10 +1,11 @@
 using Domain;
 using Domain.ExplicitJoinEntities;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 
 namespace Persistence
 {
-    public class StoreContext : DbContext
+    public class StoreContext : IdentityDbContext<AppUser>
     {
         public StoreContext(DbContextOptions options) : base(options)
         {

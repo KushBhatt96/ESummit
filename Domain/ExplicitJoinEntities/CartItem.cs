@@ -15,8 +15,9 @@
         // as we need to track this additional Quantity property of a product in a cart
         public int Quantity { get; set; }
 
-        // We make this a get-only property which is auto-calculated
+        // TODO: We make this a get-only property which is auto-calculated
         // since its value is strictly dependent on product price and cartItem quantity
+
         //public long TotalPrice => Product.Price * Quantity;
     }
 }

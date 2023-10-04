@@ -1,12 +1,15 @@
 ﻿using Application.CartItems.Commands.AddCartItem;
 using Application.CartItems.Commands.RemoveCartItem;
 using Application.CartItems.Commands.UpdateCartItemQuantity;
+using Common.Contants;
 using Domain.DTO;
 using Domain.ExplicitJoinEntities;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace API.Controllers
 {
+    [Authorize(Roles = RoleNames.Customer)]
     public class CartItemsController : BaseApiController
     {
         private readonly IAddCartItemCommand _addCartItemCommand;

@@ -15,11 +15,12 @@ namespace Domain
 
         public List<CartItem> CartItems { get; set; }
 
-
+        public List<OrderItem> OrderItems { get; set; }
 
         public Product()
         {
             CartItems = new List<CartItem>();
+            OrderItems = new List<OrderItem>();
         }
     }
 

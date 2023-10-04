@@ -1,9 +1,12 @@
 ﻿using Application.Carts.Queries.GetCart;
+using Common.Contants;
 using Domain;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace API.Controllers
 {
+    [Authorize(Roles = RoleNames.Customer)]
     public class CartController : BaseApiController
     {
         private readonly IGetCartQuery _getCartQuery;

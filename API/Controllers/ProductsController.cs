@@ -1,10 +1,13 @@
 using Application.Products.Queries.GetProductDetail;
 using Application.Products.Queries.GetProducts;
+using Common.Contants;
 using Domain;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace API.Controllers
 {
+    [Authorize(Roles = RoleNames.Admin)]
     public class ProductsController : BaseApiController
     {
         private readonly IGetProductsQuery _getProductsQuery;

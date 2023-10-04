@@ -9,7 +9,7 @@
         public DateTime Expiration { get; set; }
         public string CVV { get; set; }
         public string ZipCode { get; set; }
-        public int CustomerId { get; set; }
+        public string AppUserId { get; set; }
     }
 
     public enum CardType

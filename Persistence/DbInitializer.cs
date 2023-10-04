@@ -1,13 +1,64 @@
+using Common.Contants;
 using Domain;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
+using System.Globalization;
 
 namespace Persistence
 {
     public static class DbInitializer
     {
-        public static async Task InitializeAsync(StoreContext context)
+        public static async Task InitializeAsync(StoreContext context, UserManager<AppUser> userManager, RoleManager<IdentityRole> roleManager)
         {
-            if (context.Products.Any()) return;
+            if (context.Products.Any() || context.Users.Any()) return;
 
+            await AddAdministratorAsync(userManager, roleManager);
+
+            await AddProductsAsync(context);
+
+            await context.SaveChangesAsync();
+        }
+
+        public static async Task AddAdministratorAsync(UserManager<AppUser> userManager, RoleManager<IdentityRole> roleManager)
+        {
+            // Create a single admin user for test purposes
+            var adminUser = new AppUser
+            {
+                FirstName = "test",
+                LastName = "admin",
+                DateOfBirth = DateTime.ParseExact("2023-10-01", "yyyy-MM-dd", new CultureInfo("en-US", true)),
+                UserName = "test.admin",
+                Email = "test.admin@esummit.com",
+            };
+
+            var result = await userManager.CreateAsync(adminUser, "ESummit1234$");
+
+            if (!result.Succeeded)
+            {
+                throw new Exception("Error occurred while seeding data.");
+            }
+
+            // Create roles
+            if (!await roleManager.RoleExistsAsync(RoleNames.Customer))
+            {
+                await roleManager.CreateAsync(new IdentityRole(RoleNames.Customer));
+            }
+            if (!await roleManager.RoleExistsAsync(RoleNames.Admin))
+            {
+                await roleManager.CreateAsync(new IdentityRole(RoleNames.Admin));
+            }
+
+            // Assign appropriate roles to newly created admin user
+            var admin = await userManager.FindByNameAsync("test.admin");
+            if (admin != null && !await userManager.IsInRoleAsync(admin, RoleNames.Admin))
+            {
+                await userManager.AddToRoleAsync(admin, RoleNames.Customer);
+                await userManager.AddToRoleAsync(admin, RoleNames.Admin);
+            }
+        }
+
+        public static async Task AddProductsAsync(DbContext context)
+        {
             var products = new List<Product>
             {
                 new Product
@@ -212,18 +263,7 @@ namespace Persistence
             {
                 await context.AddAsync(product);
             }
-
-            var cart = new Cart
-            {
-                CreatedAt = DateTime.UtcNow,
-                LastUpdated = DateTime.UtcNow,
-                CartTotal = 0,
-                CustomerId = 1,
-            };
-
-            await context.Carts.AddAsync(cart);
-
-            await context.SaveChangesAsync();
         }
+
     }
 }
