@@ -1,4 +1,6 @@
-﻿using Domain.ExplicitJoinEntities;
+﻿using Domain;
+using Domain.ExplicitJoinEntities;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Persistence;
 
@@ -8,11 +10,13 @@ namespace Application.CartItems.Commands.AddCartItem
     {
 
         private readonly StoreContext _context;
-        public AddCartItemCommand(StoreContext context)
+        private readonly UserManager<AppUser> _userManager;
+        public AddCartItemCommand(StoreContext context, UserManager<AppUser> userManager)
         {
             _context = context;
+            _userManager = userManager;
         }
-        public async Task<CartItem> ExecuteAsync(int productId)
+        public async Task<CartItem> ExecuteAsync(string userName, int productId)
         {
             // 1. Make sure the product exists in the DB
             var product = await _context.Products.FindAsync(productId);
@@ -24,9 +28,10 @@ namespace Application.CartItems.Commands.AddCartItem
                 throw new Exception("Unable to add. Please select a valid product.");
             }
 
-            // 2. Based on the user information, we must retrieve their cart, assume cartId == 1 for now
-            var tempCartId = 1;
-            var cart = await _context.Carts.Include(cart => cart.CartItems).SingleOrDefaultAsync(cart => cart.CartId == tempCartId);
+            // 2. Based on the user information, we must retrieve their cart
+            var user = await _userManager.FindByNameAsync(userName);
+
+            var cart = await _context.Carts.Include(cart => cart.CartItems).SingleOrDefaultAsync(cart => cart.AppUserId == user.Id);
 
             if (cart == null)
             {

@@ -2,6 +2,6 @@
 {
     public interface IUpdateCartItemQuantityCommand
     {
-        Task ExecuteAsync(int cartItemId, int quantity);
+        Task ExecuteAsync(string userName, int cartItemId, int quantity);
     }
 }

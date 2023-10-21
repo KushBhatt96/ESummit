@@ -1,4 +1,6 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Domain;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using Persistence;
 
 namespace Application.CartItems.Commands.UpdateCartItemQuantity
@@ -6,11 +8,13 @@ namespace Application.CartItems.Commands.UpdateCartItemQuantity
     public class UpdateCartItemQuantityCommand : IUpdateCartItemQuantityCommand
     {
         private readonly StoreContext _context;
-        public UpdateCartItemQuantityCommand(StoreContext context)
+        private readonly UserManager<AppUser> _userManager;
+        public UpdateCartItemQuantityCommand(StoreContext context, UserManager<AppUser> userManager)
         {
             _context = context;
+            _userManager = userManager;
         }
-        public async Task ExecuteAsync(int cartItemId, int quantity)
+        public async Task ExecuteAsync(string userName, int cartItemId, int quantity)
         {
             if (quantity < 1 || quantity > 5)
             {
@@ -20,8 +24,8 @@ namespace Application.CartItems.Commands.UpdateCartItemQuantity
             }
 
             // 1. Find the cart associated with this user, user cartId == 1 for now
-            var tempCartId = 1;
-            var cart = await _context.Carts.Include(cart => cart.CartItems).SingleOrDefaultAsync(cart => cart.CartId == tempCartId);
+            var user = await _userManager.FindByNameAsync(userName);
+            var cart = await _context.Carts.Include(cart => cart.CartItems).SingleOrDefaultAsync(cart => cart.AppUserId == user.Id);
 
             if (cart == null)
             {

@@ -2,6 +2,6 @@
 {
     public interface IRemoveCartItemCommand
     {
-        Task ExecuteAsync(int cartItemId);
+        Task ExecuteAsync(string userName, int cartItemId);
     }
 }

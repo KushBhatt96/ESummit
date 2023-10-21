@@ -14,6 +14,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using Microsoft.OpenApi.Models;
+using Application.CartItems.Commands.AppendLocalCartItems;
 
 namespace API
 {
@@ -114,6 +115,7 @@ namespace API
             builder.Services.AddScoped<IGetCartQuery, GetCartQuery>();
             builder.Services.AddScoped<IGetProductsQuery, GetProductsQuery>();
             builder.Services.AddScoped<IGetProductDetailQuery, GetProductDetailQuery>();
+            builder.Services.AddScoped<IAppendLocalCartItemsCommand, AppendLocalCartItemsCommand>();
 
             var app = builder.Build();
 

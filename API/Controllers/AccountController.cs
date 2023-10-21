@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
 using Persistence;
+using System.Globalization;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
@@ -45,7 +46,7 @@ namespace API.Controllers
                     {
                         FirstName = input.FirstName,
                         LastName = input.LastName,
-                        DateOfBirth = input.DateOfBirth,
+                        DateOfBirth = DateTime.ParseExact(input.DateOfBirth, "yyyy-MM-dd", CultureInfo.InvariantCulture),
                         UserName = input.UserName,
                         Email = input.Email,
                     };

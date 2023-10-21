@@ -1,4 +1,6 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Domain;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using Persistence;
 
 namespace Application.CartItems.Commands.RemoveCartItem
@@ -6,17 +8,19 @@ namespace Application.CartItems.Commands.RemoveCartItem
     public class RemoveCartItemCommand : IRemoveCartItemCommand
     {
         private readonly StoreContext _context;
+        private readonly UserManager<AppUser> _userManager;
 
-        public RemoveCartItemCommand(StoreContext context)
+        public RemoveCartItemCommand(StoreContext context, UserManager<AppUser> userManager)
         {
             _context = context;
+            _userManager = userManager;
         }
 
-        public async Task ExecuteAsync(int cartItemId)
+        public async Task ExecuteAsync(string userName, int cartItemId)
         {
-            // 1. Find the cart associated with this user, user cartId == 1 for now
-            var tempCartId = 1;
-            var cart = await _context.Carts.Include(cart => cart.CartItems).SingleOrDefaultAsync(cart => cart.CartId == tempCartId);
+            // 1. Find the cart associated with this user
+            var user = await _userManager.FindByNameAsync(userName);
+            var cart = await _context.Carts.Include(cart => cart.CartItems).SingleOrDefaultAsync(cart => cart.AppUserId == user.Id);
 
             if (cart == null)
             {

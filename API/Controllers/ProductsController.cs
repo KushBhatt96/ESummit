@@ -7,7 +7,6 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace API.Controllers
 {
-    [Authorize(Roles = RoleNames.Admin)]
     public class ProductsController : BaseApiController
     {
         private readonly IGetProductsQuery _getProductsQuery;

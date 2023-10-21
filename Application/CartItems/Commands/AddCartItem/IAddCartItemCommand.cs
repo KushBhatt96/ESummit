@@ -4,6 +4,6 @@ namespace Application.CartItems.Commands.AddCartItem
 {
     public interface IAddCartItemCommand
     {
-        Task<CartItem> ExecuteAsync(int productId);
+        Task<CartItem> ExecuteAsync(string userName, int productId);
     }
 }
