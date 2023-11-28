@@ -91,63 +91,53 @@ namespace API.Controllers
         {
             try
             {
-                if (ModelState.IsValid)
+                var user = await _userManager.FindByNameAsync(input.UserName);
+                if (user == null || !await _userManager.CheckPasswordAsync(user, input.Password))
                 {
-                    var user = await _userManager.FindByNameAsync(input.UserName);
-                    if (user == null || !await _userManager.CheckPasswordAsync(user, input.Password))
-                    {
-                        // TODO: Logging
-                        // TODO: Use or create more specific Exception objects
-                        throw new Exception("Invalid login attempt.");
-                    }
-                    else
-                    {
-                        var signingCredentials = new SigningCredentials(new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["JWT:SigningKey"])), SecurityAlgorithms.HmacSha256);
-
-                        var claims = new List<Claim>();
-                        claims.Add(new Claim(ClaimTypes.Name, user.UserName));
-
-                        // add a claim for every role that is assigned to this authenticated user
-                        claims.AddRange((await _userManager.GetRolesAsync(user)).Select(role => new Claim(ClaimTypes.Role, role)));
-
-                        var jwtObject = new JwtSecurityToken(
-                                issuer: _configuration["JWT:Issuer"],
-                                audience: _configuration["JWT:Audience"],
-                                claims: claims,
-                                expires: DateTime.Now.AddSeconds(300),
-                                signingCredentials: signingCredentials
-                            );
-
-                        var jwtString = new JwtSecurityTokenHandler().WriteToken(jwtObject);
-
-                        // Use EF Explicit Loading to load the cart for this user, or null if it doesn't exist yet
-                        // EF Explicit Loading is for loading related properties for objects already in memory, such as this user
-                        await _context.Entry(user).Navigation("Cart").LoadAsync();
-
-                        if (user.Cart == null)
-                        {
-                            var cart = new Cart
-                            {
-                                CreatedAt = DateTime.Now,
-                                LastUpdated = DateTime.Now,
-                                CartTotal = 0,
-                                AppUserId = user.Id,
-                                AppUser = user
-                            };
-
-                            await _context.Carts.AddAsync(cart);
-                            await _context.SaveChangesAsync();
-                        }
-
-                        return StatusCode(StatusCodes.Status200OK, jwtString);
-                    }
+                    // TODO: Logging
+                    // TODO: Use or create more specific Exception objects
+                    throw new Exception("Invalid login attempt.");
                 }
                 else
                 {
-                    var details = new ValidationProblemDetails(ModelState);
-                    details.Type = "https://tools.ietf.org/html/rfc7231#section-6.5.1";
-                    details.Status = StatusCodes.Status400BadRequest;
-                    return new BadRequestObjectResult(details);
+                    var signingCredentials = new SigningCredentials(new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["JWT:SigningKey"])), SecurityAlgorithms.HmacSha256);
+
+                    var claims = new List<Claim>();
+                    claims.Add(new Claim(ClaimTypes.Name, user.UserName));
+
+                    // add a claim for every role that is assigned to this authenticated user
+                    claims.AddRange((await _userManager.GetRolesAsync(user)).Select(role => new Claim(ClaimTypes.Role, role)));
+
+                    var jwtObject = new JwtSecurityToken(
+                            issuer: _configuration["JWT:Issuer"],
+                            audience: _configuration["JWT:Audience"],
+                            claims: claims,
+                            expires: DateTime.Now.AddSeconds(300),
+                            signingCredentials: signingCredentials
+                        );
+
+                    var jwtString = new JwtSecurityTokenHandler().WriteToken(jwtObject);
+
+                    // Use EF Explicit Loading to load the cart for this user, or null if it doesn't exist yet
+                    // EF Explicit Loading is for loading related properties for objects already in memory, such as this user
+                    await _context.Entry(user).Navigation("Cart").LoadAsync();
+
+                    if (user.Cart == null)
+                    {
+                        var cart = new Cart
+                        {
+                            CreatedAt = DateTime.Now,
+                            LastUpdated = DateTime.Now,
+                            CartTotal = 0,
+                            AppUserId = user.Id,
+                            AppUser = user
+                        };
+
+                        await _context.Carts.AddAsync(cart);
+                        await _context.SaveChangesAsync();
+                    }
+
+                    return StatusCode(StatusCodes.Status200OK, new AppUserDTO(user, jwtString));
                 }
             }
             catch (Exception e)
