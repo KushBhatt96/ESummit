@@ -2,6 +2,8 @@
 
 namespace Domain
 {
+    // IdentityUser is a special POCO from Microsoft.AspnetCore.Identity dll that contains a bunch of user-related data
+    // like Username, Email, PasswordHash, SecurityStamp, etc.
     public class AppUser : IdentityUser
     {
         public string FirstName { get; set; }
@@ -18,6 +20,10 @@ namespace Domain
         public List<Notification> Notifications { get; set; }
 
         public List<Address> Addresses { get; set; }
+
+        public string? RefreshToken { get; set; }
+
+        public DateTime? RefreshTokenExpiryTime { get; set; }
 
         public AppUser()
         {

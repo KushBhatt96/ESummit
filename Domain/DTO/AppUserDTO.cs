@@ -7,16 +7,14 @@
         public string DateOfBirth { get; set; }
         public string Email { get; set; }
         public string  Username { get; set; }
-        public string Jwt { get; set; }
 
-        public AppUserDTO(AppUser user, string jwt)
+        public AppUserDTO(AppUser user)
         {
             Firstname = user.FirstName;
             Lastname = user.LastName;
             DateOfBirth = user.DateOfBirth.ToString();
             Email = user.Email;
             Username = user.UserName;
-            Jwt = jwt;
         }
     }
 }

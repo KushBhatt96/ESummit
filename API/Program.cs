@@ -1,4 +1,5 @@
 using API.Middleware;
+using API.Controllers.Helpers;
 using Microsoft.EntityFrameworkCore;
 using Persistence;
 using Application.CartItems.Commands.AddCartItem;
@@ -17,6 +18,7 @@ using Microsoft.OpenApi.Models;
 using Application.CartItems.Commands.AppendLocalCartItems;
 using Microsoft.Net.Http.Headers;
 using Microsoft.AspNetCore.Mvc;
+using Application.Carts.Commands.InitializeCart;
 
 namespace API
 {
@@ -88,6 +90,8 @@ namespace API
                 options.Password.RequireUppercase = true;
                 options.Password.RequireNonAlphanumeric = true;
                 options.Password.RequiredLength = 12;
+
+                options.User.RequireUniqueEmail = true;
             }).AddEntityFrameworkStores<StoreContext>().AddDefaultTokenProviders();
 
             builder.Services.AddAuthentication(options =>
@@ -99,7 +103,8 @@ namespace API
                 options.DefaultSignInScheme =
                 options.DefaultSignOutScheme =
                 JwtBearerDefaults.AuthenticationScheme;
-            }).AddJwtBearer(options =>
+            }).
+            AddJwtBearer(options =>
             {
                 options.TokenValidationParameters = new TokenValidationParameters
                 {
@@ -107,12 +112,26 @@ namespace API
                     ValidIssuer = builder.Configuration["JWT:Issuer"],
                     ValidateAudience = true,
                     ValidAudience = builder.Configuration["JWT:Audience"],
+                    ValidateLifetime = true,
                     ValidateIssuerSigningKey = true,
                     IssuerSigningKey = new SymmetricSecurityKey(
                         Encoding.UTF8.GetBytes(
                             builder.Configuration["JWT:SigningKey"]
                         )
-                    )
+                    ),
+                    ClockSkew = TimeSpan.Zero
+                };
+
+                options.Events = new JwtBearerEvents
+                {
+                    OnMessageReceived = context =>
+                    {
+                        if (context.Request.Cookies.ContainsKey("access-token"))
+                        {
+                            context.Token = context.Request.Cookies["access-token"];
+                        }
+                        return Task.CompletedTask;
+                    }
                 };
             });
 
@@ -137,6 +156,8 @@ namespace API
             builder.Services.AddScoped<IGetProductsQuery, GetProductsQuery>();
             builder.Services.AddScoped<IGetProductDetailQuery, GetProductDetailQuery>();
             builder.Services.AddScoped<IAppendLocalCartItemsCommand, AppendLocalCartItemsCommand>();
+            builder.Services.AddScoped<ITokenHelper, TokenHelper>();
+            builder.Services.AddScoped<IInitializeCartCommand, InitializeCartCommand>();
 
             var app = builder.Build();
 
@@ -154,7 +175,7 @@ namespace API
             // Server must respond with CORS header indicating that the specified client url is allowed to display the returned data
             app.UseCors(opt =>
             {
-                opt.AllowAnyHeader().AllowAnyMethod().WithOrigins("http://127.0.0.1:5173", "http://localhost:5173");
+                opt.AllowAnyHeader().AllowAnyMethod().WithOrigins("http://127.0.0.1:5173", "http://localhost:5173").AllowCredentials(); ;
             });
 
             //app.UseResponseCaching();
@@ -182,14 +203,13 @@ namespace API
             var scope = app.Services.CreateScope();
             var context = scope.ServiceProvider.GetRequiredService<StoreContext>();
             var userManager = scope.ServiceProvider.GetRequiredService<UserManager<AppUser>>();
-            var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
             var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
             try
             {
                 await context.Database.MigrateAsync();
                 // Add seed data to the DB if it doesn't already exists
                 // TODO: Instead use EF Core's built-in functionality for seed data
-                await DbInitializer.InitializeAsync(context, userManager, roleManager);
+                await DbInitializer.InitializeAsync(context, userManager);
             }
             catch (Exception ex)
             {

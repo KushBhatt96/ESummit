@@ -8,21 +8,31 @@ namespace Persistence
 {
     public static class DbInitializer
     {
-        public static async Task InitializeAsync(StoreContext context, UserManager<AppUser> userManager, RoleManager<IdentityRole> roleManager)
+        public static async Task InitializeAsync(StoreContext context, UserManager<AppUser> userManager)
         {
-            if (context.Products.Any() || context.Users.Any()) return;
+            var hasUsers = await userManager.Users.AnyAsync();
+            var hasProducts = await context.Products.AnyAsync();
 
-            await AddAdministratorAsync(userManager, roleManager);
+            if (hasUsers && hasProducts) return;
 
-            await AddProductsAsync(context);
+            if (!hasUsers)
+            {
+                await AddAdministratorAsync(userManager);
+            }
+
+            if (!hasProducts)
+            {
+                await AddProductsAsync(context);
+            }
 
             await context.SaveChangesAsync();
         }
 
-        public static async Task AddAdministratorAsync(UserManager<AppUser> userManager, RoleManager<IdentityRole> roleManager)
+        public static async Task AddAdministratorAsync(UserManager<AppUser> userManager)
         {
-            // Create a single admin user for test purposes
-            var adminUser = new AppUser
+            var results = new List<IdentityResult>();
+            // 1. Create a single admin user for test purposes
+            var admin = new AppUser
             {
                 FirstName = "test",
                 LastName = "admin",
@@ -31,30 +41,18 @@ namespace Persistence
                 Email = "test.admin@esummit.com",
             };
 
-            var result = await userManager.CreateAsync(adminUser, "ESummit1234$");
+            results.Add(await userManager.CreateAsync(admin, "ESummit1234$"));
 
-            if (!result.Succeeded)
-            {
-                throw new Exception("Error occurred while seeding data.");
-            }
+            // 2. Assign appropriate roles to newly created admin user
+            results.Add(await userManager.AddToRolesAsync(admin, new string[] { RoleNames.Admin, RoleNames.Customer }));
 
-            // Create roles
-            if (!await roleManager.RoleExistsAsync(RoleNames.Customer))
+            results.ForEach(result =>
             {
-                await roleManager.CreateAsync(new IdentityRole(RoleNames.Customer));
-            }
-            if (!await roleManager.RoleExistsAsync(RoleNames.Admin))
-            {
-                await roleManager.CreateAsync(new IdentityRole(RoleNames.Admin));
-            }
-
-            // Assign appropriate roles to newly created admin user
-            var admin = await userManager.FindByNameAsync("test.admin");
-            if (admin != null && !await userManager.IsInRoleAsync(admin, RoleNames.Admin))
-            {
-                await userManager.AddToRoleAsync(admin, RoleNames.Customer);
-                await userManager.AddToRoleAsync(admin, RoleNames.Admin);
-            }
+                if (!result.Succeeded)
+                {
+                    throw new Exception("Error occurred while attempting to seed data.");
+                }
+            });
         }
 
         public static async Task AddProductsAsync(DbContext context)

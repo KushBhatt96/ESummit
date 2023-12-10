@@ -1,6 +1,9 @@
-﻿using Common.Contants;
+﻿using API.Controllers.Helpers;
+using Application.Carts.Commands.InitializeCart;
+using Common.Contants;
 using Domain;
 using Domain.DTO;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
@@ -19,24 +22,28 @@ namespace API.Controllers
         private readonly ILogger<AccountController> _logger;
         private readonly IConfiguration _configuration;
         private readonly UserManager<AppUser> _userManager;
-        private readonly SignInManager<AppUser> _signInManager;
+        private readonly ITokenHelper _tokenHelper;
+        private readonly IInitializeCartCommand _initializeCartCommand;
 
         public AccountController(StoreContext context,
                                  ILogger<AccountController> logger,
                                  IConfiguration configuration,
                                  UserManager<AppUser> userManager,
-                                 SignInManager<AppUser> signInManager)
+                                 SignInManager<AppUser> signInManager,
+                                 ITokenHelper tokenHelper,
+                                 IInitializeCartCommand initializeCartCommand)
         {
             _context = context;
             _logger = logger;
             _configuration = configuration;
             _userManager = userManager;
-            _signInManager = signInManager;
+            _tokenHelper = tokenHelper;
+            _initializeCartCommand = initializeCartCommand;
         }
 
         // TODO: Need to prevent logged in users from being able to call this endpoint
         [HttpPost]
-        public async Task<ActionResult> Register(RegisterDTO input)
+        public async Task<ActionResult> Register(RegisterDTO registerDTO)
         {
             try
             {
@@ -44,28 +51,26 @@ namespace API.Controllers
                 {
                     var newUser = new AppUser
                     {
-                        FirstName = input.FirstName,
-                        LastName = input.LastName,
-                        DateOfBirth = DateTime.ParseExact(input.DateOfBirth, "yyyy-MM-dd", CultureInfo.InvariantCulture),
-                        UserName = input.UserName,
-                        Email = input.Email,
+                        FirstName = registerDTO.FirstName,
+                        LastName = registerDTO.LastName,
+                        DateOfBirth = DateTime.ParseExact(registerDTO.DateOfBirth, "yyyy-MM-dd", CultureInfo.InvariantCulture),
+                        UserName = registerDTO.UserName,
+                        Email = registerDTO.Email,
                     };
 
-                    var result = await _userManager.CreateAsync(newUser, input.Password);
+                    var result = await _userManager.CreateAsync(newUser, registerDTO.Password);
 
-                    if (result.Succeeded)
-                    {
-                        // Now assign a customer role to this new user
-                        await _userManager.AddToRoleAsync(newUser, RoleNames.Customer);
-
-                        // TODO: Log "User {userName} ({email}) has been created." here
-                        return StatusCode(201, $"User '{newUser.UserName}' has been created.");
-                    }
-                    else
+                    if (!result.Succeeded)
                     {
                         // TODO: Add logging about error here
                         throw new Exception($"Error: {string.Join(" ", result.Errors.Select(e => e.Description))}");
                     }
+
+                    // Now assign a customer role to this new user
+                    await _userManager.AddToRoleAsync(newUser, RoleNames.Customer);
+
+                    // TODO: Log "User {userName} ({email}) has been created." here
+                    return StatusCode(StatusCodes.Status201Created, $"User '{newUser.UserName}' has been created.");
                 }
                 else
                 {
@@ -87,12 +92,12 @@ namespace API.Controllers
 
         // TODO: Need to prevent logged in users from calling this endpoint
         [HttpPost]
-        public async Task<ActionResult> Login(LoginDTO input)
+        public async Task<ActionResult> Login(LoginDTO loginDTO)
         {
             try
             {
-                var user = await _userManager.FindByNameAsync(input.UserName);
-                if (user == null || !await _userManager.CheckPasswordAsync(user, input.Password))
+                var user = await _userManager.FindByNameAsync(loginDTO.UserName);
+                if (user == null || !await _userManager.CheckPasswordAsync(user, loginDTO.Password))
                 {
                     // TODO: Logging
                     // TODO: Use or create more specific Exception objects
@@ -100,44 +105,39 @@ namespace API.Controllers
                 }
                 else
                 {
-                    var signingCredentials = new SigningCredentials(new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["JWT:SigningKey"])), SecurityAlgorithms.HmacSha256);
+                    var claims = await SetupClaimsAsync(user);
+                    var accessToken = _tokenHelper.GenerateAccessToken(claims);
 
-                    var claims = new List<Claim>();
-                    claims.Add(new Claim(ClaimTypes.Name, user.UserName));
+                    user.RefreshToken = _tokenHelper.GenerateRefreshToken();
+                    user.RefreshTokenExpiryTime = DateTime.Now.AddHours(24);
 
-                    // add a claim for every role that is assigned to this authenticated user
-                    claims.AddRange((await _userManager.GetRolesAsync(user)).Select(role => new Claim(ClaimTypes.Role, role)));
+                    await _userManager.UpdateAsync(user);
 
-                    var jwtObject = new JwtSecurityToken(
-                            issuer: _configuration["JWT:Issuer"],
-                            audience: _configuration["JWT:Audience"],
-                            claims: claims,
-                            expires: DateTime.Now.AddSeconds(300),
-                            signingCredentials: signingCredentials
-                        );
+                    await _initializeCartCommand.ExecuteAsync(user);
 
-                    var jwtString = new JwtSecurityTokenHandler().WriteToken(jwtObject);
-
-                    // Use EF Explicit Loading to load the cart for this user, or null if it doesn't exist yet
-                    // EF Explicit Loading is for loading related properties for objects already in memory, such as this user
-                    await _context.Entry(user).Navigation("Cart").LoadAsync();
-
-                    if (user.Cart == null)
-                    {
-                        var cart = new Cart
+                    // Place access and refresh tokens into httponly cookie
+                    Response.Cookies.Append("access-token", accessToken,
+                        new CookieOptions
                         {
-                            CreatedAt = DateTime.Now,
-                            LastUpdated = DateTime.Now,
-                            CartTotal = 0,
-                            AppUserId = user.Id,
-                            AppUser = user
-                        };
+                            Expires = DateTime.Now.AddHours(24),
+                            HttpOnly = true,
+                            Secure = true,
+                            IsEssential = true,
+                            SameSite = SameSiteMode.None
+                        });
 
-                        await _context.Carts.AddAsync(cart);
-                        await _context.SaveChangesAsync();
-                    }
+                    Response.Cookies.Append("refresh-token", user.RefreshToken,
+                        new CookieOptions
+                        {
+                            Expires = DateTime.Now.AddHours(24),
+                            HttpOnly = true,
+                            Secure = true,
+                            IsEssential = true,
+                            SameSite = SameSiteMode.None
+                        });
 
-                    return StatusCode(StatusCodes.Status200OK, new AppUserDTO(user, jwtString));
+                    return StatusCode(StatusCodes.Status200OK,
+                        new AppUserDTO(user));
                 }
             }
             catch (Exception e)
@@ -150,5 +150,64 @@ namespace API.Controllers
             }
         }
 
+        [HttpPost, Authorize(Roles = $"{RoleNames.Admin},{RoleNames.Customer}")]
+        public async Task<ActionResult> Logout()
+        {
+            var userName = User.FindFirst(ClaimTypes.Name)?.Value;
+            if (string.IsNullOrWhiteSpace(userName))
+            {
+                return BadRequest("Invalid client request.");
+            }
+
+            var user = await _userManager.FindByNameAsync(userName);
+
+            if(user == null)
+            {
+                return BadRequest("Invalid user.");
+            }
+
+            // Revoke ref token
+            user.RefreshToken = null;
+            await _userManager.UpdateAsync(user);
+
+            // expire cookies (thus removing from client)
+            Response.Cookies.Delete("access-token",
+                        new CookieOptions
+                        {
+                            Expires = DateTime.Now.AddYears(-1),
+                            HttpOnly = true,
+                            Secure = true,
+                            IsEssential = true,
+                            SameSite = SameSiteMode.None
+                        });
+            Response.Cookies.Delete("refresh-token",
+                        new CookieOptions
+                        {
+                            Expires = DateTime.Now.AddYears(-1),
+                            HttpOnly = true,
+                            Secure = true,
+                            IsEssential = true,
+                            SameSite = SameSiteMode.None
+                        });
+            return StatusCode(StatusCodes.Status200OK);
+        }
+
+        #region Helpers
+        private async Task<List<Claim>> SetupClaimsAsync(AppUser user)
+        {
+            // A claim is something that the user says they are or something they have
+            // these claims will be included in the payload of the JWT
+            var claims = new List<Claim>();
+
+            claims.Add(new Claim(ClaimTypes.Email, user.Email));
+            claims.Add(new Claim(ClaimTypes.Name, user.UserName));
+            var roles = await _userManager.GetRolesAsync(user);
+            foreach (var role in roles)
+            {
+                claims.Add(new Claim(ClaimTypes.Role, role));
+            }
+            return claims;
+        }
+        #endregion
     }
 }
