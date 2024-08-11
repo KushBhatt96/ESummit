@@ -55,7 +55,7 @@ namespace API.Controllers.Helpers
                 ValidateIssuer = false,
                 ValidateIssuerSigningKey = true,
                 IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["JWT:SigningKey"])),
-                ValidateLifetime = true
+                ValidateLifetime = false // must be false or we get exception thrown when trying to extract "principal" below, if token is expired (i.e. fails validate lifetime check)
 
             };
 

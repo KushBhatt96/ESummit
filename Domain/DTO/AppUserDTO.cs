@@ -12,7 +12,7 @@
         {
             Firstname = user.FirstName;
             Lastname = user.LastName;
-            DateOfBirth = user.DateOfBirth.ToString();
+            DateOfBirth = user.DateOfBirth.ToString("yyyy-MM-dd");
             Email = user.Email;
             Username = user.UserName;
         }

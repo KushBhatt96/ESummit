@@ -15,7 +15,6 @@ namespace API.Controllers
         private readonly IGetProductDetailQuery _getProductDetailQuery;
         public ProductsController(IGetProductsQuery getProductsQuery, IGetProductDetailQuery getProductDetailQuery)
         {
-            
             _getProductsQuery = getProductsQuery;
             _getProductDetailQuery = getProductDetailQuery;
         }

@@ -19,6 +19,7 @@ using Application.CartItems.Commands.AppendLocalCartItems;
 using Microsoft.Net.Http.Headers;
 using Microsoft.AspNetCore.Mvc;
 using Application.Carts.Commands.InitializeCart;
+using Application.CartItems.Commands.RemoveAllCartItems;
 
 namespace API
 {
@@ -151,6 +152,7 @@ namespace API
 
             builder.Services.AddScoped<IAddCartItemCommand, AddCartItemCommand>();
             builder.Services.AddScoped<IRemoveCartItemCommand, RemoveCartItemCommand>();
+            builder.Services.AddScoped<IRemoveAllCartItemsCommand, RemoveAllCartItemsCommand>();
             builder.Services.AddScoped<IUpdateCartItemQuantityCommand, UpdateCartItemQuantityCommand>();
             builder.Services.AddScoped<IGetCartQuery, GetCartQuery>();
             builder.Services.AddScoped<IGetProductsQuery, GetProductsQuery>();

@@ -1,5 +1,6 @@
 ﻿using Application.CartItems.Commands.AddCartItem;
 using Application.CartItems.Commands.AppendLocalCartItems;
+using Application.CartItems.Commands.RemoveAllCartItems;
 using Application.CartItems.Commands.RemoveCartItem;
 using Application.CartItems.Commands.UpdateCartItemQuantity;
 using Common.Contants;
@@ -16,15 +17,18 @@ namespace API.Controllers
     {
         private readonly IAddCartItemCommand _addCartItemCommand;
         private readonly IRemoveCartItemCommand _removeCartItemCommand;
+        private readonly IRemoveAllCartItemsCommand _removeAllCartItemsCommand;
         private readonly IUpdateCartItemQuantityCommand _updateCartItemQuantityCommand;
         private readonly IAppendLocalCartItemsCommand _appendLocalCartItemsCommand;
         public CartItemsController(IAddCartItemCommand addCartItemCommand,
                                    IRemoveCartItemCommand removeCartItemCommand,
+                                   IRemoveAllCartItemsCommand removeAllCartItemsCommand,
                                    IUpdateCartItemQuantityCommand updateCartItemQuantityCommand,
                                    IAppendLocalCartItemsCommand appendLocalCartItemsCommand)
         {
             _addCartItemCommand = addCartItemCommand;
             _removeCartItemCommand = removeCartItemCommand;
+            _removeAllCartItemsCommand = removeAllCartItemsCommand;
             _updateCartItemQuantityCommand = updateCartItemQuantityCommand;
             _appendLocalCartItemsCommand = appendLocalCartItemsCommand;
         }
@@ -51,6 +55,19 @@ namespace API.Controllers
             }
 
             await _removeCartItemCommand.ExecuteAsync(userName, cartItemId);
+            return Ok();
+        }
+
+        [HttpDelete]
+        public async Task<ActionResult> ClearCart()
+        {
+            var userName = User.FindFirst(ClaimTypes.Name)?.Value;
+            if(userName == null)
+            {
+                throw new Exception("A problem occurred. Please try again later.");
+            }
+
+            await _removeAllCartItemsCommand.ExecuteAsync(userName);
             return Ok();
         }
 
